@@ -45,7 +45,7 @@ local SOUNDS = {
 local defaults = {
     point = "CENTER", relPoint = "CENTER", x = 0, y = -150,
     locked = false, icd = DEFAULT_ICD, sound = true, debug = false,
-    soundChoice = "raid", scale = 1, showText = true, flash = true,
+    soundChoice = "raid", size = 40, showText = true, flash = true,
 }
 
 local db
@@ -86,6 +86,13 @@ local function SpellName()
         end
     end
     return "Touch of the Grave"
+end
+
+local MIN_SIZE, MAX_SIZE = 24, 96   -- icon size in pixels
+
+-- A whole number of pixels from MIN_SIZE to MAX_SIZE.
+local function ClampSize(value)
+    return math.min(MAX_SIZE, math.max(MIN_SIZE, floor(value + 0.5)))
 end
 
 local function ShortestGap()
@@ -204,10 +211,13 @@ local function OnUpdate(_, elapsed)
 end
 
 -- The frame always takes the mouse, for the tooltip and the right-click. A
--- locked frame does not move.
+-- locked frame does not move. An unlocked frame shows a thin outline, so that
+-- the player can find it. A locked frame shows only the icon.
 local function ApplyLock()
     frame:EnableMouse(true)
-    frame.bg:SetShown(not db.locked)
+    for _, edge in ipairs(frame.outline) do
+        edge:SetShown(not db.locked)
+    end
 end
 
 local function ApplyPosition()
@@ -216,7 +226,8 @@ local function ApplyPosition()
 end
 
 local function ApplyLook()
-    frame:SetScale(db.scale)
+    frame:SetSize(db.size, db.size)
+    glow:SetSize(db.size * 1.9, db.size * 1.9)   -- the glow texture has a wide empty edge
     text:SetShown(db.showText)
 end
 
@@ -233,7 +244,6 @@ end
 
 local function CreateDisplay()
     frame = CreateFrame("Frame", "TouchOfTheGraveFrame", UIParent)
-    frame:SetSize(40, 40)
     frame:SetMovable(true)
     frame:SetClampedToScreen(true)
     frame:RegisterForDrag("LeftButton")
@@ -251,10 +261,20 @@ local function CreateDisplay()
     frame:SetScript("OnEnter", ShowTooltip)
     frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    frame.bg = frame:CreateTexture(nil, "BACKGROUND")
-    frame.bg:SetPoint("TOPLEFT", -3, 3)
-    frame.bg:SetPoint("BOTTOMRIGHT", 3, -3)
-    frame.bg:SetColorTexture(0.2, 0.6, 1, 0.5)
+    -- Four lines of 1 pixel around the icon: the outline of an unlocked frame.
+    frame.outline = {}
+    local edges = {
+        { "TOPLEFT", "TOPRIGHT", 0, 1 }, { "BOTTOMLEFT", "BOTTOMRIGHT", 0, -1 },
+        { "TOPLEFT", "BOTTOMLEFT", -1, 0 }, { "TOPRIGHT", "BOTTOMRIGHT", 1, 0 },
+    }
+    for _, e in ipairs(edges) do
+        local edge = frame:CreateTexture(nil, "OVERLAY")
+        edge:SetColorTexture(1, 1, 1, 0.6)
+        edge:SetPoint(e[1], frame, e[1], e[3], e[4])
+        edge:SetPoint(e[2], frame, e[2], e[3], e[4])
+        if e[3] == 0 then edge:SetHeight(1) else edge:SetWidth(1) end
+        frame.outline[#frame.outline + 1] = edge
+    end
 
     icon = frame:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
@@ -271,7 +291,6 @@ local function CreateDisplay()
     glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     glow:SetBlendMode("ADD")
     glow:SetPoint("CENTER")
-    glow:SetSize(76, 76)
     glow:SetAlpha(0)
     glowAnim = glow:CreateAnimationGroup()
     glowAnim:SetLooping("BOUNCE")
@@ -354,8 +373,8 @@ local function CreateOptions()
     Checkbox("flash", "Flash when ready", "Flash the icon when the cooldown is over.")
     Checkbox("showText", "Show the countdown text", "Show \"Ready\" or the seconds left below the icon.", ApplyLook)
     Checkbox("locked", "Lock the frame", "Stop the frame from moving. Clear it to drag the frame.", ApplyLock)
-    Slider("scale", "Frame scale", "The size of the icon.", 0.5, 2, 0.05,
-        function(value) return format("%d%%", value * 100 + 0.5) end, ApplyLook)
+    Slider("size", "Icon size", "The width and height of the icon in pixels.", MIN_SIZE, MAX_SIZE, 1,
+        function(value) return format("%d px", value) end, ApplyLook)
     Settings.RegisterAddOnCategory(category)
 end
 
@@ -496,6 +515,11 @@ local function Command(input)
         db.icd = math.max(1, tonumber(arg))
         SyncSetting("icd")
         Print("internal cooldown set to %s.", Seconds(db.icd))
+    elseif cmd == "size" and tonumber(arg) then
+        db.size = ClampSize(tonumber(arg))
+        ApplyLook()
+        SyncSetting("size")
+        Print("icon size set to %d px.", db.size)
     elseif cmd == "sound" then
         db.sound = not db.sound
         SyncSetting("sound")
@@ -509,7 +533,7 @@ local function Command(input)
         wipe(db.log)
         Print("proc log cleared.")
     else
-        Print("commands: options, lock, unlock, reset, test, icd <seconds>, sound, debug, stats, clearlog")
+        Print("commands: options, lock, unlock, reset, test, icd <seconds>, size <pixels>, sound, debug, stats, clearlog")
     end
 end
 
@@ -523,6 +547,11 @@ loader:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         TouchOfTheGraveDB = TouchOfTheGraveDB or {}
         db = TouchOfTheGraveDB
+        -- Version 0.1.0 saved a frame scale (1 = 40 px). Version 0.1.1 saves the icon size.
+        if db.size == nil and type(db.scale) == "number" then
+            db.size = ClampSize(defaults.size * db.scale)
+        end
+        db.scale = nil
         for key, value in pairs(defaults) do
             if db[key] == nil then db[key] = value end
         end

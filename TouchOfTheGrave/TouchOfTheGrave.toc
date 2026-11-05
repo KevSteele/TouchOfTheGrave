@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Touch of the Grave Timer
 ## Notes: Shows when the Undead racial Touch of the Grave can proc again.
-## Version: 0.1.0
+## Version: 0.1.1
 ## Author: Kevin
 ## SavedVariablesPerCharacter: TouchOfTheGraveDB
 ## X-License: MIT

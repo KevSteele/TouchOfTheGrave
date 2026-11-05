@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 (2026-11-04)
+
+- The blue background behind the icon is gone. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown text.
+- New icon size setting, 24 to 96 pixels (default 40): a slider on the options page and the command `/totg size <pixels>`. It replaces the frame scale setting. A saved scale changes to the same size the first time.
+
 ## 0.1.0 (2026-11-04)
 
 First release.

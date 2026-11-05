@@ -39,7 +39,7 @@ Game Menu > Options > AddOns > Touch of the Grave Timer:
 - Flash when ready
 - Show the countdown text
 - Lock the frame
-- Frame scale
+- Icon size (24 to 96 pixels)
 
 Move the mouse onto the icon to see the state, the internal cooldown, the time
 since the last proc and the shortest gap between two procs.
@@ -51,6 +51,7 @@ since the last proc and the shortest gap between two procs.
 - `/totg reset`: move the frame to the default position and clear the timer.
 - `/totg test`: start the timer one time, to see the display.
 - `/totg icd <seconds>`: set the internal cooldown.
+- `/totg size <pixels>`: set the icon size.
 - `/totg sound`: set the sound on or off.
 - `/totg debug`: show the Shadow hits, the heals and the procs in chat.
 - `/totg stats`: show the last procs and the shortest gap.

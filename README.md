@@ -80,7 +80,7 @@ install both, because only one of them can own the command.
 - The icon is the Touch of the Grave icon from the client. The addon asks for the icon of spell 1260189, then 1260201, then 1260198, and uses the first icon that it gets. If the client gives no icon, the addon uses file data ID 136157 (`Interface\Icons\Spell_Shadow_FingerOfDeath`), which forever.warcraftdb.com shows for both passives.
 - Move the mouse onto the icon to see a tooltip: the state ("Ready" or the seconds left), the internal cooldown setting, the time since the last proc, and the shortest gap between two procs.
 - Right-click the icon to open the options.
-- If the frame is unlocked, drag it with the left mouse button.
+- If the frame is unlocked, drag it with the left mouse button. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown text.
 
 ## Options
 
@@ -94,7 +94,7 @@ the options open when combat ends.
 - Flash when ready: on or off.
 - Show the countdown text: show "Ready" or the seconds left below the icon.
 - Lock the frame: stop the frame from moving. A locked frame still shows the tooltip and opens the options.
-- Frame scale: 50% to 200%.
+- Icon size: 24 to 96 pixels. The default is 40.
 
 ## Commands
 
@@ -103,6 +103,7 @@ the options open when combat ends.
 - `/totg reset`: move the frame to the default position and clear the timer.
 - `/totg test`: start the timer one time, to see the display.
 - `/totg icd <seconds>`: set the internal cooldown. The default is 15.
+- `/totg size <pixels>`: set the icon size, 24 to 96. The default is 40.
 - `/totg sound`: set the sound on or off.
 - `/totg debug`: show each Shadow hit on your target, each heal on you, and each proc in chat.
 - `/totg stats`: show the procs in the log and the shortest gap between two procs.
