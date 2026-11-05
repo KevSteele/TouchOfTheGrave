@@ -41,6 +41,9 @@ Game Menu > Options > AddOns > Touch of the Grave Timer:
 - Lock the frame
 - Icon size (24 to 96 pixels)
 
+Left-click the icon to turn the sound alert on or off. While it is off, a small
+speaker with a red line through it shows in the bottom right corner of the icon.
+
 Move the mouse onto the icon to see the state, the internal cooldown, the time
 since the last proc and the shortest gap between two procs.
 
@@ -52,7 +55,7 @@ since the last proc and the shortest gap between two procs.
 - `/totg test`: start the timer one time, to see the display.
 - `/totg icd <seconds>`: set the internal cooldown.
 - `/totg size <pixels>`: set the icon size.
-- `/totg sound`: set the sound on or off.
+- `/totg sound`: set the sound alert on or off (the same as a left-click on the icon).
 - `/totg debug`: show the Shadow hits, the heals and the procs in chat.
 - `/totg stats`: show the last procs and the shortest gap.
 - `/totg clearlog`: clear the proc log.

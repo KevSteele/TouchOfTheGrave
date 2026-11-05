@@ -79,6 +79,7 @@ install both, because only one of them can own the command.
 
 - The icon is the Touch of the Grave icon from the client. The addon asks for the icon of spell 1260189, then 1260201, then 1260198, and uses the first icon that it gets. If the client gives no icon, the addon uses file data ID 136157 (`Interface\Icons\Spell_Shadow_FingerOfDeath`), which forever.warcraftdb.com shows for both passives.
 - Move the mouse onto the icon to see a tooltip: the state ("Ready" or the seconds left), the internal cooldown setting, the time since the last proc, and the shortest gap between two procs.
+- Left-click the icon to turn the sound alert on or off. While the sound alert is off, a small speaker with a red line through it shows in the bottom right corner of the icon.
 - Right-click the icon to open the options.
 - If the frame is unlocked, drag it with the left mouse button. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown number.
 
@@ -89,7 +90,7 @@ Game Menu > Options > AddOns > Touch of the Grave Timer. If you are in combat,
 the options open when combat ends.
 
 - Internal cooldown: 5 to 60 seconds. The default is 15.
-- Sound when ready: on or off.
+- Sound when ready: on or off. A left-click on the icon does the same.
 - Sound: raid warning, ready check, alarm clock or soft click. The addon plays the sound when you select it.
 - Flash when ready: on or off.
 - Show the countdown text: show the seconds left in the center of the icon, in a font of about 40% of the icon size. When the cooldown is over, no text shows: the icon at full brightness is the ready state.
@@ -104,7 +105,7 @@ the options open when combat ends.
 - `/totg test`: start the timer one time, to see the display.
 - `/totg icd <seconds>`: set the internal cooldown. The default is 15.
 - `/totg size <pixels>`: set the icon size, 24 to 96. The default is 40.
-- `/totg sound`: set the sound on or off.
+- `/totg sound`: set the sound alert on or off (the same as a left-click on the icon).
 - `/totg debug`: show each Shadow hit on your target, each heal on you, and each proc in chat.
 - `/totg stats`: show the procs in the log and the shortest gap between two procs.
 - `/totg clearlog`: clear the proc log.

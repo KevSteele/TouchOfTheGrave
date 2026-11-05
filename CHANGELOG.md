@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 (2026-11-04)
+
+- A left-click on the icon turns the sound alert on or off. A drag does not. The chat tells you the new state.
+- While the sound alert is off, a small speaker with a red line through it shows in the bottom right corner of the icon. It is 40% of the icon size.
+- The tooltip shows the state of the sound alert and the left-click hint.
+
 ## 0.1.3 (2026-11-04)
 
 - The tooltip now opens at the default tooltip place (the bottom right of the screen, or the place set in Edit Mode), as the tooltips of the action bars do. Before, it opened at the right side of the icon.

@@ -50,6 +50,8 @@ local defaults = {
 
 local db
 local frame, icon, cd, text, glow, glowAnim
+local muteMark             -- the muted speaker in the bottom right corner
+local ToggleSound          -- defined after the options panel (it syncs the panel)
 local readyAt = 0          -- GetTime() value when the next proc can happen
 local lastProc             -- GetTime() value of the last proc
 local needHeal             -- true for Priest and Warlock (see SHADOW_CLASSES)
@@ -190,8 +192,9 @@ local function ShowTooltip()
         lastProc and format("%d s", GetTime() - lastProc) or "no proc yet", 1, 0.82, 0, 1, 1, 1)
     local minGap = ShortestGap()
     GameTooltip:AddDoubleLine("Shortest gap", minGap and Seconds(minGap) or "none yet", 1, 0.82, 0, 1, 1, 1)
-    GameTooltip:AddLine(db.locked and "Right-click: options. Unlock in the options to move."
-        or "Drag: move. Right-click: options.", 0.6, 0.6, 0.6, true)
+    GameTooltip:AddDoubleLine("Sound alert", db.sound and "on" or "off", 1, 0.82, 0, 1, 1, 1)
+    GameTooltip:AddLine("Left-click: sound on or off. Right-click: options.", 0.6, 0.6, 0.6, true)
+    GameTooltip:AddLine(db.locked and "Unlock in the options to move." or "Drag: move.", 0.6, 0.6, 0.6, true)
     GameTooltip:Show()
 end
 
@@ -236,6 +239,15 @@ local function ApplyLook()
     -- The countdown number is 40% of the icon size, with an outline.
     text:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", floor(db.size * 0.4 + 0.5), "OUTLINE")
     text:SetShown(db.showText)
+    -- The muted speaker is 40% of the icon size, in the bottom right corner.
+    local mute = math.max(10, floor(db.size * 0.4 + 0.5))
+    muteMark:SetSize(mute, mute)
+    muteMark.line:SetSize(mute * 1.2, math.max(2, floor(mute * 0.14 + 0.5)))
+end
+
+-- The muted speaker shows only while the sound alert is off.
+local function ApplyMute()
+    muteMark:SetShown(not db.sound)
 end
 
 local function OpenOptions()
@@ -254,7 +266,11 @@ local function CreateDisplay()
     frame:SetMovable(true)
     frame:SetClampedToScreen(true)
     frame:RegisterForDrag("LeftButton")
+    -- A left-click turns the sound alert on or off. A drag is not a click.
+    local dragged = false
+    frame:SetScript("OnMouseDown", function() dragged = false end)
     frame:SetScript("OnDragStart", function(self)
+        dragged = true
         if not db.locked then self:StartMoving() end
     end)
     frame:SetScript("OnDragStop", function(self)
@@ -263,7 +279,11 @@ local function CreateDisplay()
         db.point, db.relPoint, db.x, db.y = point, relPoint, x, y
     end)
     frame:SetScript("OnMouseUp", function(_, button)
-        if button == "RightButton" then OpenOptions() end
+        if button == "RightButton" then
+            OpenOptions()
+        elseif button == "LeftButton" and not dragged then
+            ToggleSound()
+        end
     end)
     frame:SetScript("OnEnter", ShowTooltip)
     frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -300,6 +320,20 @@ local function CreateDisplay()
     text:SetPoint("CENTER")
     text:SetTextColor(1, 1, 1)
 
+    -- A speaker with a red line through it: the sound alert is off.
+    muteMark = CreateFrame("Frame", nil, overlay)
+    muteMark:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    local backing = muteMark:CreateTexture(nil, "BACKGROUND")
+    backing:SetAllPoints()
+    backing:SetColorTexture(0, 0, 0, 0.6)   -- dark, so the mark reads on bright icon art
+    local speaker = muteMark:CreateTexture(nil, "ARTWORK")
+    speaker:SetAllPoints()
+    speaker:SetTexture("Interface\\Common\\VoiceChat-Speaker")
+    muteMark.line = muteMark:CreateTexture(nil, "OVERLAY")
+    muteMark.line:SetPoint("CENTER")
+    muteMark.line:SetColorTexture(1, 0.1, 0.1, 1)
+    muteMark.line:SetRotation(math.rad(-45))
+
     glow = frame:CreateTexture(nil, "OVERLAY")
     glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     glow:SetBlendMode("ADD")
@@ -323,6 +357,7 @@ local function CreateDisplay()
     ApplyPosition()
     ApplyLock()
     ApplyLook()
+    ApplyMute()
     SetReadyLook()
 end
 
@@ -381,7 +416,7 @@ local function CreateOptions()
     category = Settings.RegisterVerticalLayoutCategory("Touch of the Grave Timer")
     Slider("icd", "Internal cooldown", "The time in seconds after a proc before the next proc can happen.",
         5, 60, 1, function(value) return Seconds(value) end)
-    Checkbox("sound", "Sound when ready", "Play a sound when the cooldown is over.")
+    Checkbox("sound", "Sound when ready", "Play a sound when the cooldown is over. A left-click on the icon also turns it on or off.", ApplyMute)
     SoundDropdown()
     Checkbox("flash", "Flash when ready", "Flash the icon when the cooldown is over.")
     Checkbox("showText", "Show the countdown text", "Show the seconds left in the center of the icon.", ApplyLook)
@@ -396,6 +431,14 @@ local function SyncSetting(key)
     if settings[key] then
         settings[key]:SetValue(db[key])
     end
+end
+
+-- Turns the sound alert on or off: from a left-click on the icon or /totg sound.
+function ToggleSound()
+    db.sound = not db.sound
+    ApplyMute()
+    SyncSetting("sound")
+    Print("sound alert %s.", db.sound and "on" or "off")
 end
 
 -- ---------------------------------------------------------------------------
@@ -534,9 +577,7 @@ local function Command(input)
         SyncSetting("size")
         Print("icon size set to %d px.", db.size)
     elseif cmd == "sound" then
-        db.sound = not db.sound
-        SyncSetting("sound")
-        Print("sound %s.", db.sound and "on" or "off")
+        ToggleSound()
     elseif cmd == "debug" then
         db.debug = not db.debug
         Print(db.debug and "debug on. Shadow hits, heals and procs show in chat." or "debug off.")
