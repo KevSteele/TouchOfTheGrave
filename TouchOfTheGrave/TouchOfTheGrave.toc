@@ -7,7 +7,7 @@
 ## X-License: MIT
 ## X-Category: Combat
 # Remove the "# " before the next two lines when the GitHub repository and the CurseForge project exist.
-# ## X-Website: https://github.com/<github-user>/TouchOfTheGrave
+## X-Website: https://github.com/KevSteele/TouchOfTheGrave
 # ## X-Curse-Project-ID: <project-id>
 
 TouchOfTheGrave.lua
