@@ -1,0 +1,4 @@
+# Release zips from tools/zip.ps1 and the local BigWigs packager
+dist/
+.release/
+*.zip
