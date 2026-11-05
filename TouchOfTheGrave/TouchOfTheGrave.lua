@@ -141,11 +141,11 @@ local function SetIcon()
     end
 end
 
+-- The ready state is the icon at full brightness, with no text.
 local function SetReadyLook()
     icon:SetDesaturated(false)
     icon:SetVertexColor(1, 1, 1)
-    text:SetText("Ready")
-    text:SetTextColor(0.3, 1, 0.3)
+    text:SetText("")
 end
 
 local function BecomeReady(alert)
@@ -167,7 +167,6 @@ local function StartCooldown(startTime, duration)
     readyAt = startTime + duration
     icon:SetDesaturated(true)
     icon:SetVertexColor(0.7, 0.7, 0.7)
-    text:SetTextColor(1, 0.82, 0)
     CooldownFrame_Set(cd, startTime, duration, true)
 end
 
@@ -228,6 +227,8 @@ end
 local function ApplyLook()
     frame:SetSize(db.size, db.size)
     glow:SetSize(db.size * 1.9, db.size * 1.9)   -- the glow texture has a wide empty edge
+    -- The countdown number is 40% of the icon size, with an outline.
+    text:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", floor(db.size * 0.4 + 0.5), "OUTLINE")
     text:SetShown(db.showText)
 end
 
@@ -284,8 +285,14 @@ local function CreateDisplay()
     cd:SetAllPoints()
     cd:SetHideCountdownNumbers(true)
 
-    text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("TOP", frame, "BOTTOM", 0, -2)
+    -- The countdown number sits in the center of the icon, on a frame above the
+    -- cooldown sweep. A font string on the main frame would be under the sweep.
+    local overlay = CreateFrame("Frame", nil, frame)
+    overlay:SetAllPoints()
+    overlay:SetFrameLevel(cd:GetFrameLevel() + 2)
+    text = overlay:CreateFontString(nil, "OVERLAY")
+    text:SetPoint("CENTER")
+    text:SetTextColor(1, 1, 1)
 
     glow = frame:CreateTexture(nil, "OVERLAY")
     glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
@@ -371,7 +378,7 @@ local function CreateOptions()
     Checkbox("sound", "Sound when ready", "Play a sound when the cooldown is over.")
     SoundDropdown()
     Checkbox("flash", "Flash when ready", "Flash the icon when the cooldown is over.")
-    Checkbox("showText", "Show the countdown text", "Show \"Ready\" or the seconds left below the icon.", ApplyLook)
+    Checkbox("showText", "Show the countdown text", "Show the seconds left in the center of the icon.", ApplyLook)
     Checkbox("locked", "Lock the frame", "Stop the frame from moving. Clear it to drag the frame.", ApplyLock)
     Slider("size", "Icon size", "The width and height of the icon in pixels.", MIN_SIZE, MAX_SIZE, 1,
         function(value) return format("%d px", value) end, ApplyLook)

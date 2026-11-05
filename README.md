@@ -1,8 +1,8 @@
 # Touch of the Grave Timer
 
-This addon shows an icon with a cooldown sweep and a countdown. When the internal
-cooldown (ICD) of the Undead racial "Touch of the Grave" is over, the icon shows
-"Ready", flashes, and plays a sound. The addon loads only for Undead characters.
+This addon shows an icon with a cooldown sweep and a countdown number in its
+center. When the internal cooldown (ICD) of the Undead racial "Touch of the
+Grave" is over, the icon goes back to full brightness, flashes, and plays a sound. The addon loads only for Undead characters.
 It works only on World of Warcraft: Forever (Interface 16001, game version 1.60.1).
 
 ## Repository layout
@@ -58,7 +58,7 @@ and the cooldown API give only secret values. Thus the addon uses only
 
 The proc does Shadow damage to your target and heals you by the same amount.
 
-- If the icon shows "Ready" and your class has no Shadow damage of its own (Warrior, Paladin, Rogue, Mage), one Shadow hit on your target is a proc.
+- If the icon is ready (full brightness) and your class has no Shadow damage of its own (Warrior, Paladin, Rogue, Mage), one Shadow hit on your target is a proc.
 - In all other cases, a heal on you must come in 0.5 seconds before or after the Shadow hit, with the same amount.
 - Priest and Warlock: the addon ignores Shadow hits while you channel a spell (Drain Life, Mind Flay). It also stops for the time of Devouring Plague (24 s), Siphon Life (30 s) and Death Coil (3 s) after you cast them, because these spells also do Shadow damage and heal you. For this, the addon reads the cast event on Priest and Warlock characters only. If the client gives the spell ID as a secret value, the addon cannot see the cast, and a tick of these spells can count as a proc. This is not tested.
 - The addon ignores Shadow damage when you are out of combat, but it accepts it in the first 2 seconds after combat ends.
@@ -66,7 +66,7 @@ The proc does Shadow damage to your target and heals you by the same amount.
 Limits:
 
 - The addon sees only procs on your current target. Keep the monster that you attack as your target.
-- In a group, Shadow damage from another player on your target can look like a proc when the icon shows "Ready". Play alone for the tests.
+- In a group, Shadow damage from another player on your target can look like a proc when the icon is ready. Play alone for the tests.
 
 ### The other addon
 
@@ -80,7 +80,7 @@ install both, because only one of them can own the command.
 - The icon is the Touch of the Grave icon from the client. The addon asks for the icon of spell 1260189, then 1260201, then 1260198, and uses the first icon that it gets. If the client gives no icon, the addon uses file data ID 136157 (`Interface\Icons\Spell_Shadow_FingerOfDeath`), which forever.warcraftdb.com shows for both passives.
 - Move the mouse onto the icon to see a tooltip: the state ("Ready" or the seconds left), the internal cooldown setting, the time since the last proc, and the shortest gap between two procs.
 - Right-click the icon to open the options.
-- If the frame is unlocked, drag it with the left mouse button. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown text.
+- If the frame is unlocked, drag it with the left mouse button. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown number.
 
 ## Options
 
@@ -92,7 +92,7 @@ the options open when combat ends.
 - Sound when ready: on or off.
 - Sound: raid warning, ready check, alarm clock or soft click. The addon plays the sound when you select it.
 - Flash when ready: on or off.
-- Show the countdown text: show "Ready" or the seconds left below the icon.
+- Show the countdown text: show the seconds left in the center of the icon, in a font of about 40% of the icon size. When the cooldown is over, no text shows: the icon at full brightness is the ready state.
 - Lock the frame: stop the frame from moving. A locked frame still shows the tooltip and opens the options.
 - Icon size: 24 to 96 pixels. The default is 40.
 

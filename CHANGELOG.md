@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 (2026-11-04)
+
+- No more "Ready" text below the icon. When the cooldown is over, the icon at full brightness shows the ready state, with the flash and the sound if they are on.
+- The countdown number is now in the center of the icon, over the cooldown sweep. Its font is about 40% of the icon size, with an outline. The option "Show the countdown text" still turns it on or off.
+
 ## 0.1.1 (2026-11-04)
 
 - The blue background behind the icon is gone. An unlocked frame shows a thin white outline, so that you can find it. A locked frame shows only the icon and the countdown text.
