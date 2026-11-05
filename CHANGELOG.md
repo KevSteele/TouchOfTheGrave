@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 (2026-11-04)
+
+- The tooltip now opens at the default tooltip place (the bottom right of the screen, or the place set in Edit Mode), as the tooltips of the action bars do. Before, it opened at the right side of the icon.
+
 ## 0.1.2 (2026-11-04)
 
 - No more "Ready" text below the icon. When the cooldown is over, the icon at full brightness shows the ready state, with the flash and the sound if they are on.

@@ -171,7 +171,13 @@ local function StartCooldown(startTime, duration)
 end
 
 local function ShowTooltip()
-    GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+    -- The default anchor, as the action bars use: the bottom right of the
+    -- screen, or the place that the player set for tooltips.
+    if GameTooltip_SetDefaultAnchor then
+        GameTooltip_SetDefaultAnchor(GameTooltip, frame)
+    else
+        GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+    end
     GameTooltip:AddLine(SpellName(), 1, 1, 1)
     local left = readyAt - GetTime()
     if readyAt == 0 or left <= 0 then
