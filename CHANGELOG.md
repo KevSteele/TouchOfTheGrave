@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5 (2026-11-05)
+
+- First release on CurseForge, project 1785132. The TOC now has the project ID, so the release workflow can upload the zip.
+- A logo image for the project page is in `docs/logo.png`. It is not part of the addon zip.
+
+
 ## 0.1.4 (2026-11-04)
 
 - A left-click on the icon turns the sound alert on or off. A drag does not. The chat tells you the new state.

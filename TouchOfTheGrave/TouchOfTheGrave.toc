@@ -1,13 +1,12 @@
 ## Interface: 16001
 ## Title: Touch of the Grave Timer
 ## Notes: Shows when the Undead racial Touch of the Grave can proc again.
-## Version: 0.1.4
+## Version: 0.1.5
 ## Author: Kevin
 ## SavedVariablesPerCharacter: TouchOfTheGraveDB
 ## X-License: MIT
 ## X-Category: Combat
-# Remove the "# " before the next two lines when the GitHub repository and the CurseForge project exist.
 ## X-Website: https://github.com/KevSteele/TouchOfTheGrave
-# ## X-Curse-Project-ID: <project-id>
+## X-Curse-Project-ID: 1785132
 
 TouchOfTheGrave.lua
