@@ -20,8 +20,8 @@ Forever does not let addons read the combat log. Thus the addon uses the
 `UNIT_COMBAT` event. A proc does Shadow damage to your target and heals you by
 the same amount:
 
-- Warrior, Paladin, Rogue and Mage: when the icon is ready, one Shadow hit on your target is the proc.
-- Priest and Warlock: the heal on you must come with the Shadow hit. The addon also ignores your channeled spells (Drain Life, Mind Flay), and it stops for the time of Devouring Plague, Siphon Life and Death Coil.
+- The heal on you must come with the Shadow hit. A hit alone is not a proc. Thus items that do damage on each melee hit (Thorncursed Grips) do not start the timer.
+- Priest and Warlock: the addon also ignores your channeled spells (Drain Life, Mind Flay), and it stops for the time of Devouring Plague, Siphon Life and Death Coil.
 
 ## The internal cooldown
 

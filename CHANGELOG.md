@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 (2026-11-08)
+
+- A hit on your target alone no longer counts as a proc. The heal on you must come with it, for all classes. Before, when the icon was ready, the on-hit damage of Thorncursed Grips started the timer on a Rogue.
+
 ## 0.1.5 (2026-11-05)
 
 - First release on CurseForge, project 1785132. The TOC now has the project ID, so the release workflow can upload the zip.

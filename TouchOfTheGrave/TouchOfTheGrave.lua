@@ -11,8 +11,8 @@ local ADDON = ...
 
 local SHADOW = 32                       -- school mask of Shadow damage
 local PAIR_WINDOW = 0.5                 -- seconds between the damage and the heal of one proc
--- Classes with Shadow damage of their own. For them, a Shadow hit alone is not
--- a proc: the heal must come with it.
+-- Classes with Shadow spells of their own that heal the caster. For them,
+-- detection stops for a time after a drain spell (see DRAINS).
 local SHADOW_CLASSES = { PRIEST = true, WARLOCK = true }
 -- Priest and Warlock spells that do Shadow damage and heal the caster, with the
 -- time in seconds that they can do it. Detection stops for this time after a
@@ -487,9 +487,9 @@ local function SameAmount(a, b)
 end
 
 -- A proc does Shadow damage to the target and heals the player by the
--- same amount. If the timer shows "Ready" and the class has no Shadow damage of
--- its own, a Shadow hit alone is enough. In all other cases the heal must come
--- in PAIR_WINDOW seconds, before or after the hit.
+-- same amount. The heal must come in PAIR_WINDOW seconds, before or after the
+-- hit. A hit alone is not a proc: items such as Thorncursed Grips do damage to
+-- the target on each melee hit, but they do not heal the player.
 local function OnUnitCombat(unit, action, _, amount, school)
     unit, action, school = Plain(unit), Plain(action), Plain(school)
     if not unit or not action then
@@ -518,10 +518,7 @@ local function OnUnitCombat(unit, action, _, amount, school)
         if not inCombat and now - leftCombatAt > 2 then
             return
         end
-        if not needHeal and readyAt == 0 then
-            lastShadow, lastHeal = nil, nil
-            OnProc()
-        elseif lastHeal and now - lastHeal.t <= PAIR_WINDOW and SameAmount(amount, lastHeal.amount) then
+        if lastHeal and now - lastHeal.t <= PAIR_WINDOW and SameAmount(amount, lastHeal.amount) then
             lastShadow, lastHeal = nil, nil
             OnProc()
         else

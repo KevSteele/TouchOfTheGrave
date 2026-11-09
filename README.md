@@ -58,8 +58,8 @@ and the cooldown API give only secret values. Thus the addon uses only
 
 The proc does Shadow damage to your target and heals you by the same amount.
 
-- If the icon is ready (full brightness) and your class has no Shadow damage of its own (Warrior, Paladin, Rogue, Mage), one Shadow hit on your target is a proc.
-- In all other cases, a heal on you must come in 0.5 seconds before or after the Shadow hit, with the same amount.
+- A heal on you must come in 0.5 seconds before or after the Shadow hit, with the same amount. A Shadow hit alone is not a proc.
+- Items such as Thorncursed Grips do damage to your target on each melee hit, but they do not heal you. Thus the addon ignores them.
 - Priest and Warlock: the addon ignores Shadow hits while you channel a spell (Drain Life, Mind Flay). It also stops for the time of Devouring Plague (24 s), Siphon Life (30 s) and Death Coil (3 s) after you cast them, because these spells also do Shadow damage and heal you. For this, the addon reads the cast event on Priest and Warlock characters only. If the client gives the spell ID as a secret value, the addon cannot see the cast, and a tick of these spells can count as a proc. This is not tested.
 - The addon ignores Shadow damage when you are out of combat, but it accepts it in the first 2 seconds after combat ends.
 
