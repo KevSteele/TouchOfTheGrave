@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.1.6 (2026-11-08)
+## 0.1.6 (2026-11-09)
 
-- A hit on your target alone no longer counts as a proc. The heal on you must come with it, for all classes. Before, when the icon was ready, the on-hit damage of Thorncursed Grips started the timer on a Rogue.
+- A hit on your target alone no longer counts as a proc. The heal on you must come with it, for all classes. The client hides the damage amounts, so the heal is the only sign that tells a proc from other Shadow damage.
+- In debug mode, the chat also shows each hit that the addon drops, with its unit and school. A test on a Rogue with Thorncursed Grips showed that their damage is Nature (school 8) on you and on your target, so the addon never counted it.
 
 ## 0.1.5 (2026-11-05)
 

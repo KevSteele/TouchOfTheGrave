@@ -488,8 +488,8 @@ end
 
 -- A proc does Shadow damage to the target and heals the player by the
 -- same amount. The heal must come in PAIR_WINDOW seconds, before or after the
--- hit. A hit alone is not a proc: items such as Thorncursed Grips do damage to
--- the target on each melee hit, but they do not heal the player.
+-- hit. A hit alone is not a proc: items such as Thorncursed Grips do Nature
+-- damage to the target on each melee hit, and they do not heal the player.
 local function OnUnitCombat(unit, action, _, amount, school)
     unit, action, school = Plain(unit), Plain(action), Plain(school)
     if not unit or not action then
@@ -499,6 +499,11 @@ local function OnUnitCombat(unit, action, _, amount, school)
     local isShadowHit = unit == "target" and action == "WOUND" and tonumber(school) == SHADOW
     local isHeal = unit == "player" and action == "HEAL"
     if not isShadowHit and not isHeal then
+        if db.debug and action == "WOUND" then
+            -- Shows the school of the hits the filter drops, such as an item effect.
+            Print("other hit: %s school %s amount %s", unit, tostring(school or "?"),
+                tostring(tonumber(Plain(amount)) or "?"))
+        end
         return
     end
     amount = tonumber(Plain(amount))
