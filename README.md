@@ -58,7 +58,7 @@ and the cooldown API give only secret values. Thus the addon uses only
 
 The proc does Shadow damage to your target and heals you by the same amount.
 
-- A heal on you must come in 0.5 seconds before or after the Shadow hit. A Shadow hit alone is not a proc. The client hides the amounts, so the addon cannot compare them.
+- A heal on you must come in 0.1 seconds before or after the Shadow hit. A Shadow hit alone is not a proc. The client hides the amounts, so the addon cannot compare them. On every measured proc the hit and the heal came in the same frame, 0.00 s apart.
 - A match inside the internal cooldown does not restart the timer, because a real proc cannot come that soon. The chat reports it. If such reports come often while you play alone, the cooldown value is too high: set it with `/totg icd <seconds>`.
 - Items such as Thorncursed Grips do Nature damage to you and to your target on each melee hit, and they do not heal you. Thus the addon ignores them.
 - Priest and Warlock: the addon ignores Shadow hits while you channel a spell (Drain Life, Mind Flay). It also stops for the time of Devouring Plague (24 s), Siphon Life (30 s) and Death Coil (3 s) after you cast them, because these spells also do Shadow damage and heal you. For this, the addon reads the cast event on Priest and Warlock characters only. If the client gives the spell ID as a secret value, the addon cannot see the cast, and a tick of these spells can count as a proc. This is not tested.
@@ -67,7 +67,7 @@ The proc does Shadow damage to your target and heals you by the same amount.
 Limits:
 
 - The addon sees only procs on your current target. Keep the monster that you attack as your target.
-- In a group, Shadow damage from another player on your target, together with a heal on you in the same half second, looks like a proc. The cooldown guard stops it from stretching the timer, but when the icon is ready it starts the timer. Play alone for the tests.
+- In a group, Shadow damage from another player on your target, together with a heal on you in the same tenth of a second, looks like a proc. The cooldown guard stops it from stretching the timer, but when the icon is ready it starts the timer. Play alone for the tests.
 - An item that does Shadow damage and heals you by the same effect looks exactly like the racial. The addon cannot tell them apart.
 
 ### The other addon

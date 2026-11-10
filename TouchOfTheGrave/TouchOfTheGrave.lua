@@ -10,7 +10,9 @@
 local ADDON = ...
 
 local SHADOW = 32                       -- school mask of Shadow damage
-local PAIR_WINDOW = 0.5                 -- seconds between the damage and the heal of one proc
+-- Seconds between the damage and the heal of one proc. The client sends both
+-- in the same frame (0.00 s on every measured proc), thus a few frames suffice.
+local PAIR_WINDOW = 0.1
 -- Classes with Shadow spells of their own that heal the caster. For them,
 -- detection stops for a time after a drain spell (see DRAINS).
 local SHADOW_CLASSES = { PRIEST = true, WARLOCK = true }
@@ -632,7 +634,7 @@ local function Stats()
         end
     end
     if longest then
-        Print("longest time from the hit to the heal: %.2f s (the addon pairs them inside %.1f s).", longest, PAIR_WINDOW)
+        Print("longest time from the hit to the heal: %.2f s (the addon pairs them inside %.2f s).", longest, PAIR_WINDOW)
     end
     for i = math.max(1, #log - 9), #log do
         local e = log[i]

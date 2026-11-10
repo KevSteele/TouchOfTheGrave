@@ -4,7 +4,7 @@
 
 - A match that comes inside the internal cooldown no longer restarts the timer. A real proc cannot come that soon, so the hit and the heal came from two sources, for example a Shadow spell of another player on your target and a heal on you. The chat says that the match was ignored, with the time since the last proc, so a wrong cooldown value still shows.
 - Debug lines go to a saved debug log, the last 300. `/totg copy` opens a window with them, selected for Ctrl+C. `/totg debug all` also shows every dropped hit with its school; plain `/totg debug` no longer does, because that is noisy.
-- The proc log keeps the time from the hit to the heal. `/totg stats` shows the longest one, and the debug print shows it for each proc. The data decides whether the pair window of 0.5 s can get smaller.
+- The proc log keeps the time from the hit to the heal. `/totg stats` shows the longest one, and the debug print shows it for each proc. The pair window is now 0.1 s instead of 0.5 s, because on every measured proc the hit and the heal came in the same frame. A chance pair of a Shadow hit from another source and a heal on you now needs both inside a tenth of a second.
 
 ## 0.1.6 (2026-11-09)
 
