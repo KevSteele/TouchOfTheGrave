@@ -445,28 +445,35 @@ end
 -- Proc detection
 -- ---------------------------------------------------------------------------
 
-local function LogProc(gap)
+local function LogProc(gap, pair)
     local log = db.log
-    log[#log + 1] = { at = date("%Y-%m-%d %H:%M:%S"), gap = gap }
+    log[#log + 1] = { at = date("%Y-%m-%d %H:%M:%S"), gap = gap, pair = pair }
     while #log > MAX_LOG do
         table.remove(log, 1)
     end
 end
 
--- Starts the timer from a proc.
-local function OnProc()
+-- Starts the timer from a proc. `pair` is the time in seconds from the hit to
+-- the heal; a negative value means the heal came first.
+local function OnProc(pair)
     local now = GetTime()
     if lastProc and now - lastProc < 1 then
         return   -- one proc can give more than one event
     end
     local gap = lastProc and (now - lastProc) or nil
-    lastProc = now
-    LogProc(gap and floor(gap * 10 + 0.5) / 10)
     if gap and gap < db.icd - 0.5 then
-        Print("proc came %.1f s after the last proc. Thus the internal cooldown is %.1f s or less.", gap, gap)
+        -- A real proc cannot come inside the internal cooldown. Thus the hit
+        -- and the heal came from two sources (another player, an item), or
+        -- the cooldown value is wrong. The timer keeps its time.
+        Print("match %.1f s after the last proc, inside the cooldown of %s. Ignored. If this repeats, the cooldown may be shorter: /totg icd <seconds>.",
+            gap, Seconds(db.icd))
+        return
     end
+    lastProc = now
+    LogProc(gap and floor(gap * 10 + 0.5) / 10, floor(pair * 100 + 0.5) / 100)
     if db.debug then
-        Print("proc found, gap %s s", gap and format("%.1f", gap) or "?")
+        Print("proc found, gap %s s, %s %.2f s apart", gap and format("%.1f", gap) or "?",
+            pair < 0 and "heal then hit" or "hit then heal", math.abs(pair))
     end
     StartCooldown(now, db.icd)
 end
@@ -524,14 +531,16 @@ local function OnUnitCombat(unit, action, _, amount, school)
             return
         end
         if lastHeal and now - lastHeal.t <= PAIR_WINDOW and SameAmount(amount, lastHeal.amount) then
+            local pair = lastHeal.t - now   -- the heal came first
             lastShadow, lastHeal = nil, nil
-            OnProc()
+            OnProc(pair)
         else
             lastShadow = { t = now, amount = amount }
         end
     elseif lastShadow and now - lastShadow.t <= PAIR_WINDOW and SameAmount(amount, lastShadow.amount) then
+        local pair = now - lastShadow.t   -- the hit came first
         lastShadow, lastHeal = nil, nil
-        OnProc()
+        OnProc(pair)
     else
         lastHeal = { t = now, amount = amount }
     end
@@ -545,9 +554,19 @@ local function Stats()
     local log, minGap = db.log, ShortestGap()
     Print("%d procs in the log. Shortest gap: %s. ICD setting: %s.",
         #log, minGap and Seconds(minGap) or "none", Seconds(db.icd))
+    local longest
+    for _, e in ipairs(log) do
+        if e.pair and (not longest or math.abs(e.pair) > longest) then
+            longest = math.abs(e.pair)
+        end
+    end
+    if longest then
+        Print("longest time from the hit to the heal: %.2f s (the addon pairs them inside %.1f s).", longest, PAIR_WINDOW)
+    end
     for i = math.max(1, #log - 9), #log do
         local e = log[i]
-        Print("  %s  gap %s", e.at, e.gap and format("%.1f", e.gap) or "-")
+        Print("  %s  gap %s  pair %s", e.at, e.gap and format("%.1f", e.gap) or "-",
+            e.pair and format("%+.2f", e.pair) or "-")
     end
 end
 
@@ -582,7 +601,7 @@ local function Command(input)
         ToggleSound()
     elseif cmd == "debug" then
         db.debug = not db.debug
-        Print(db.debug and "debug on. Shadow hits, heals and procs show in chat." or "debug off.")
+        Print(db.debug and "debug on. Shadow hits, heals, dropped hits and procs show in chat." or "debug off.")
     elseif cmd == "stats" then
         Stats()
     elseif cmd == "clearlog" then

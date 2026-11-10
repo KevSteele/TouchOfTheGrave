@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7 (2026-11-09)
+
+- A match that comes inside the internal cooldown no longer restarts the timer. A real proc cannot come that soon, so the hit and the heal came from two sources, for example a Shadow spell of another player on your target and a heal on you. The chat says that the match was ignored, with the time since the last proc, so a wrong cooldown value still shows.
+- The proc log keeps the time from the hit to the heal. `/totg stats` shows the longest one, and the debug print shows it for each proc. The data decides whether the pair window of 0.5 s can get smaller.
+
 ## 0.1.6 (2026-11-09)
 
 - A hit on your target alone no longer counts as a proc. The heal on you must come with it, for all classes. The client hides the damage amounts, so the heal is the only sign that tells a proc from other Shadow damage.
