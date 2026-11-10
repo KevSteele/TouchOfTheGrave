@@ -108,9 +108,11 @@ the options open when combat ends.
 - `/totg icd <seconds>`: set the internal cooldown. The default is 15.
 - `/totg size <pixels>`: set the icon size, 24 to 96. The default is 40.
 - `/totg sound`: set the sound alert on or off (the same as a left-click on the icon).
-- `/totg debug`: show each Shadow hit on your target, each heal on you, and each proc in chat.
+- `/totg debug`: show each Shadow hit on your target, each heal on you, and each proc in chat. The lines also go to a saved debug log (the last 300).
+- `/totg debug all`: the same, plus every hit that the addon drops, with its school. This is noisy.
+- `/totg copy`: open a window with the saved debug lines, selected. Press Ctrl+C, then paste them where you want.
 - `/totg stats`: show the procs in the log, the shortest gap between two procs, and the longest time from the hit to the heal.
-- `/totg clearlog`: clear the proc log.
+- `/totg clearlog`: clear the proc log and the debug log.
 
 ## In-game test 1: does the addon see the proc?
 
@@ -123,6 +125,7 @@ the options open when combat ends.
    - `unit combat: player HEAL <amount>`: a heal on you.
    - `proc found, gap <seconds> s`: the addon found a proc and started the timer.
 6. Type `/totg debug` again to stop the debug lines.
+7. To hand the lines to someone, type `/totg copy` and press Ctrl+C. The lines are also in the saved variables file of the character after a logout or `/reload`.
 
 If the "Combat Log" chat tab shows a Touch of the Grave hit, but no `unit
 combat:` line shows at the same time, then the client did not send

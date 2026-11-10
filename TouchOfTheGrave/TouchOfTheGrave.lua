@@ -33,6 +33,7 @@ local FALLBACK_ICONS = { 136157, "Interface\\Icons\\Spell_Shadow_FingerOfDeath",
     "Interface\\Icons\\INV_Misc_QuestionMark" }
 local DEFAULT_ICD = 15                  -- from the Forever beta notes of 2026-10-27
 local MAX_LOG = 50
+local MAX_DEBUG = 300                   -- debug lines kept in the saved variables
 
 -- Sounds for "Ready": { saved key, label, SOUNDKIT name }
 local SOUNDS = {
@@ -73,6 +74,29 @@ end
 
 local function Print(fmt, ...)
     print("|cff8f6cffTotG|r " .. format(fmt, ...))
+end
+
+-- Keeps a line in the saved debug log while debug mode is on. The log goes
+-- to the saved variables at logout or /reload, and /totg copy shows it.
+local function Record(line)
+    if not db.debug then
+        return
+    end
+    local log = db.debugLog
+    log[#log + 1] = format("%s %.2f  %s", date("%H:%M:%S"), GetTime(), line)
+    while #log > MAX_DEBUG do
+        table.remove(log, 1)
+    end
+end
+
+-- A debug line: in chat and in the saved debug log, while debug mode is on.
+local function Debug(fmt, ...)
+    if not db.debug then
+        return
+    end
+    local line = format(fmt, ...)
+    Print("%s", line)
+    Record(line)
 end
 
 -- "15 s" for a whole number, "12.5 s" for other numbers.
@@ -465,16 +489,16 @@ local function OnProc(pair)
         -- A real proc cannot come inside the internal cooldown. Thus the hit
         -- and the heal came from two sources (another player, an item), or
         -- the cooldown value is wrong. The timer keeps its time.
-        Print("match %.1f s after the last proc, inside the cooldown of %s. Ignored. If this repeats, the cooldown may be shorter: /totg icd <seconds>.",
+        local line = format("match %.1f s after the last proc, inside the cooldown of %s. Ignored. If this repeats, the cooldown may be shorter: /totg icd <seconds>.",
             gap, Seconds(db.icd))
+        Print("%s", line)
+        Record(line)
         return
     end
     lastProc = now
     LogProc(gap and floor(gap * 10 + 0.5) / 10, floor(pair * 100 + 0.5) / 100)
-    if db.debug then
-        Print("proc found, gap %s s, %s %.2f s apart", gap and format("%.1f", gap) or "?",
-            pair < 0 and "heal then hit" or "hit then heal", math.abs(pair))
-    end
+    Debug("proc found, gap %s s, %s %.2f s apart", gap and format("%.1f", gap) or "?",
+        pair < 0 and "heal then hit" or "hit then heal", math.abs(pair))
     StartCooldown(now, db.icd)
 end
 
@@ -506,17 +530,15 @@ local function OnUnitCombat(unit, action, _, amount, school)
     local isShadowHit = unit == "target" and action == "WOUND" and tonumber(school) == SHADOW
     local isHeal = unit == "player" and action == "HEAL"
     if not isShadowHit and not isHeal then
-        if db.debug and action == "WOUND" then
+        if db.debug == "all" and action == "WOUND" then
             -- Shows the school of the hits the filter drops, such as an item effect.
-            Print("other hit: %s school %s amount %s", unit, tostring(school or "?"),
+            Debug("other hit: %s school %s amount %s", unit, tostring(school or "?"),
                 tostring(tonumber(Plain(amount)) or "?"))
         end
         return
     end
     amount = tonumber(Plain(amount))
-    if db.debug then
-        Print("unit combat: %s %s %s", unit, action, tostring(amount or "?"))
-    end
+    Debug("unit combat: %s %s %s", unit, action, tostring(amount or "?"))
     local channel = UnitChannelInfo("player")
     -- A secret counts as a channel. The test stops before it compares a secret.
     local channeling = (issecretvalue and issecretvalue(channel)) or channel ~= nil
@@ -544,6 +566,55 @@ local function OnUnitCombat(unit, action, _, amount, school)
     else
         lastHeal = { t = now, amount = amount }
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- The copy window: the debug lines in an edit box, selected, for Ctrl+C
+-- ---------------------------------------------------------------------------
+
+local copyFrame
+
+local function ShowCopyFrame()
+    if not copyFrame then
+        local f = CreateFrame("Frame", "TouchOfTheGraveCopyFrame", UIParent, "BackdropTemplate")
+        f:SetSize(620, 420)
+        f:SetPoint("CENTER")
+        f:SetFrameStrata("DIALOG")
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 32,
+            insets = { left = 11, right = 12, top = 12, bottom = 11 },
+        })
+        f:SetMovable(true)
+        f:EnableMouse(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving)
+        f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        title:SetPoint("TOP", 0, -18)
+        title:SetText("Touch of the Grave debug lines. The text is selected: press Ctrl+C.")
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", -6, -6)
+        local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 22, -44)
+        scroll:SetPoint("BOTTOMRIGHT", -44, 22)
+        local box = CreateFrame("EditBox", nil, scroll)
+        box:SetMultiLine(true)
+        box:SetAutoFocus(false)
+        box:SetFontObject(ChatFontNormal)
+        box:SetWidth(540)
+        box:SetScript("OnEscapePressed", function() f:Hide() end)
+        scroll:SetScrollChild(box)
+        f.box = box
+        tinsert(UISpecialFrames, "TouchOfTheGraveCopyFrame")
+        copyFrame = f
+    end
+    local lines = db.debugLog
+    copyFrame.box:SetText(#lines > 0 and table.concat(lines, "\n") or "No debug lines yet. Type /totg debug, then fight.")
+    copyFrame:Show()
+    copyFrame.box:SetFocus()
+    copyFrame.box:HighlightText()
 end
 
 -- ---------------------------------------------------------------------------
@@ -599,16 +670,22 @@ local function Command(input)
         Print("icon size set to %d px.", db.size)
     elseif cmd == "sound" then
         ToggleSound()
+    elseif cmd == "debug" and arg == "all" then
+        db.debug = "all"
+        Print("debug on, with every dropped hit and its school. The lines also go to the saved debug log.")
     elseif cmd == "debug" then
         db.debug = not db.debug
-        Print(db.debug and "debug on. Shadow hits, heals, dropped hits and procs show in chat." or "debug off.")
+        Print(db.debug and "debug on. Shadow hits, heals and procs show in chat and go to the saved debug log." or "debug off.")
+    elseif cmd == "copy" then
+        ShowCopyFrame()
     elseif cmd == "stats" then
         Stats()
     elseif cmd == "clearlog" then
         wipe(db.log)
-        Print("proc log cleared.")
+        wipe(db.debugLog)
+        Print("proc log and debug log cleared.")
     else
-        Print("commands: options, lock, unlock, reset, test, icd <seconds>, size <pixels>, sound, debug, stats, clearlog")
+        Print("commands: options, lock, unlock, reset, test, icd <seconds>, size <pixels>, sound, debug, debug all, copy, stats, clearlog")
     end
 end
 
@@ -631,6 +708,7 @@ loader:SetScript("OnEvent", function(self, event, ...)
             if db[key] == nil then db[key] = value end
         end
         db.log = db.log or {}
+        db.debugLog = db.debugLog or {}
 
         SLASH_TOUCHOFTHEGRAVE1 = "/totg"
         local _, raceFile = UnitRace("player")
