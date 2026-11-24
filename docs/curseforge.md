@@ -57,6 +57,7 @@ since the last proc and the shortest gap between two procs.
 - `/totg size <pixels>`: set the icon size.
 - `/totg sound`: set the sound alert on or off (the same as a left-click on the icon).
 - `/totg debug`: show the Shadow hits, the heals and the procs in chat.
+- `/totg report`: see the probable cause of a problem, and get one link that sends a short report. It has no character name.
 - `/totg stats`: show the last procs and the shortest gap.
 - `/totg clearlog`: clear the proc log.
 

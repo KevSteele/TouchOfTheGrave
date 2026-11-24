@@ -36,6 +36,13 @@ local FALLBACK_ICONS = { 136157, "Interface\\Icons\\Spell_Shadow_FingerOfDeath",
 local DEFAULT_ICD = 15                  -- from the Forever beta notes of 2026-10-27
 local MAX_LOG = 50
 local MAX_DEBUG = 300                   -- debug lines kept in the saved variables
+local MAX_RECENT = 60                   -- combat events kept for the problem report
+local MAX_REPORT = 1500                 -- the longest problem report, in characters
+local REPORT_EVENTS = 15                -- combat events in a problem report
+local OFFER_FIGHTS = 15                 -- fights with no proc before the addon offers a report
+-- The form for a problem report. The addon adds the report to this link, so
+-- the player only opens the link and sends the form.
+local REPORT_URL = "https://github.com/KevSteele/TouchOfTheGrave/issues/new?template=problem.yml"
 
 -- Sounds for "Ready": { saved key, label, SOUNDKIT name }
 local SOUNDS = {
@@ -55,12 +62,14 @@ local db
 local frame, icon, cd, text, glow, glowAnim
 local muteMark             -- the muted speaker in the bottom right corner
 local ToggleSound          -- defined after the options panel (it syncs the panel)
+local ShowReport           -- defined after the copy window
 local readyAt = 0          -- GetTime() value when the next proc can happen
 local lastProc             -- GetTime() value of the last proc
 local needHeal             -- true for Priest and Warlock (see SHADOW_CLASSES)
 local drainNames = {}      -- localized names of the DRAINS spells, with their times
 local pauseUntil = 0       -- GetTime() value when detection can start again
 local inCombat, leftCombatAt = false, -100
+local hitsAtFightStart = 0 -- the counter of hits on the target when the fight started
 local lastShadow, lastHeal -- { t = GetTime(), amount = number or nil }
 local category             -- the options page in the Settings API
 local settings = {}        -- Settings API objects by saved key, to sync slash commands
@@ -88,6 +97,22 @@ local function Record(line)
     log[#log + 1] = format("%s %.2f  %s", date("%H:%M:%S"), GetTime(), line)
     while #log > MAX_DEBUG do
         table.remove(log, 1)
+    end
+end
+
+-- The counters for the problem report. They always run, so a player does not
+-- start a debug mode before a report. They hold only numbers.
+local function Count(key)
+    local counts = db.counts
+    counts[key] = (counts[key] or 0) + 1
+end
+
+-- Keeps one combat event for the problem report: the time, and fixed words.
+local function Note(now, unit, action, school)
+    local recent = db.recent
+    recent[#recent + 1] = format("%.2f %s %s %s", now, unit, action, tostring(tonumber(school) or "hidden"))
+    while #recent > MAX_RECENT do
+        table.remove(recent, 1)
     end
 end
 
@@ -221,6 +246,7 @@ local function ShowTooltip()
     GameTooltip:AddDoubleLine("Sound alert", db.sound and "on" or "off", 1, 0.82, 0, 1, 1, 1)
     GameTooltip:AddLine("Left-click: sound on or off. Right-click: options.", 0.6, 0.6, 0.6, true)
     GameTooltip:AddLine(db.locked and "Unlock in the options to move." or "Drag: move.", 0.6, 0.6, 0.6, true)
+    GameTooltip:AddLine("A problem? Type /totg report.", 0.6, 0.6, 0.6, true)
     GameTooltip:Show()
 end
 
@@ -439,7 +465,8 @@ local function SoundDropdown()
 end
 
 local function CreateOptions()
-    category = Settings.RegisterVerticalLayoutCategory("Touch of the Grave Timer")
+    local layout
+    category, layout = Settings.RegisterVerticalLayoutCategory("Touch of the Grave Timer")
     Slider("icd", "Internal cooldown", "The time in seconds after a proc before the next proc can happen.",
         5, 60, 1, function(value) return Seconds(value) end)
     Checkbox("sound", "Sound when ready", "Play a sound when the cooldown is over. A left-click on the icon also turns it on or off.", ApplyMute)
@@ -449,6 +476,13 @@ local function CreateOptions()
     Checkbox("locked", "Lock the frame", "Stop the frame from moving. Clear it to drag the frame.", ApplyLock)
     Slider("size", "Icon size", "The width and height of the icon in pixels.", MIN_SIZE, MAX_SIZE, 1,
         function(value) return format("%d px", value) end, ApplyLook)
+    -- A button for the problem report. If this client has no such control,
+    -- the page stays as it is, and /totg report does the same.
+    pcall(function()
+        layout:AddInitializer(CreateSettingsButtonInitializer("Problem report", "Open the report",
+            function() ShowReport() end,
+            "Open a window with a short report and a link to the report form. The report has no character name.", true))
+    end)
     Settings.RegisterAddOnCategory(category)
 end
 
@@ -495,9 +529,11 @@ local function OnProc(pair)
             gap, Seconds(db.icd))
         Print("%s", line)
         Record(line)
+        Count("ignored")
         return
     end
     lastProc = now
+    Count("procs")
     LogProc(gap and floor(gap * 10 + 0.5) / 10, floor(pair * 100 + 0.5) / 100)
     Debug("proc found, gap %s s, %s %.2f s apart", gap and format("%.1f", gap) or "?",
         pair < 0 and "heal then hit" or "hit then heal", math.abs(pair))
@@ -525,12 +561,27 @@ end
 -- damage to the target on each melee hit, and they do not heal the player.
 local function OnUnitCombat(unit, action, _, amount, school)
     unit, action, school = Plain(unit), Plain(action), Plain(school)
+    Count("events")
     if not unit or not action then
+        Count("hidden")   -- the client hid the unit or the action
         return
     end
     local now = GetTime()
-    local isShadowHit = unit == "target" and action == "WOUND" and tonumber(school) == SHADOW
+    local isTargetHit = unit == "target" and action == "WOUND"
+    local isShadowHit = isTargetHit and tonumber(school) == SHADOW
     local isHeal = unit == "player" and action == "HEAL"
+    if isTargetHit then
+        Count("targetHits")
+        local schools = db.counts.schools
+        local key = tostring(tonumber(school) or "hidden")
+        schools[key] = (schools[key] or 0) + 1
+    end
+    -- Physical hits (school 1) are too many for the list. The counter has them.
+    if isHeal or (isTargetHit and tonumber(school) ~= 1) then
+        Note(now, unit, action, isHeal and 0 or school)
+    end
+    if isShadowHit then Count("shadowHits") end
+    if isHeal then Count("heals") end
     if not isShadowHit and not isHeal then
         if db.debug == "all" and action == "WOUND" then
             -- Shows the school of the hits the filter drops, such as an item effect.
@@ -546,17 +597,20 @@ local function OnUnitCombat(unit, action, _, amount, school)
     local channeling = (issecretvalue and issecretvalue(channel)) or channel ~= nil
     if needHeal and (now < pauseUntil or channeling) then
         lastShadow, lastHeal = nil, nil   -- a drain spell of the player is active
+        Count("paused")
         return
     end
     if isShadowHit then
         -- Shadow damage out of combat is not from the player. A proc on the
         -- last monster can come just after combat ends, thus allow 2 seconds.
         if not inCombat and now - leftCombatAt > 2 then
+            Count("outOfCombat")
             return
         end
         if lastHeal and now - lastHeal.t <= PAIR_WINDOW and SameAmount(amount, lastHeal.amount) then
             local pair = lastHeal.t - now   -- the heal came first
             lastShadow, lastHeal = nil, nil
+            Count("pairs")
             OnProc(pair)
         else
             lastShadow = { t = now, amount = amount }
@@ -564,6 +618,7 @@ local function OnUnitCombat(unit, action, _, amount, school)
     elseif lastShadow and now - lastShadow.t <= PAIR_WINDOW and SameAmount(amount, lastShadow.amount) then
         local pair = now - lastShadow.t   -- the hit came first
         lastShadow, lastHeal = nil, nil
+        Count("pairs")
         OnProc(pair)
     else
         lastHeal = { t = now, amount = amount }
@@ -571,12 +626,19 @@ local function OnUnitCombat(unit, action, _, amount, school)
 end
 
 -- ---------------------------------------------------------------------------
--- The copy window: the debug lines in an edit box, selected, for Ctrl+C
+-- The copy window: text in an edit box, selected, for Ctrl+C. It shows the
+-- debug lines, or the problem report with the link to the report form.
 -- ---------------------------------------------------------------------------
 
 local copyFrame
 
-local function ShowCopyFrame()
+local function Select(box)
+    box:SetFocus()
+    box:HighlightText()
+end
+
+-- `link` and `steps` are nil for the debug lines.
+local function ShowCopyFrame(title, text, link, steps)
     if not copyFrame then
         local f = CreateFrame("Frame", "TouchOfTheGraveCopyFrame", UIParent, "BackdropTemplate")
         f:SetSize(620, 420)
@@ -593,14 +655,12 @@ local function ShowCopyFrame()
         f:RegisterForDrag("LeftButton")
         f:SetScript("OnDragStart", f.StartMoving)
         f:SetScript("OnDragStop", f.StopMovingOrSizing)
-        local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        title:SetPoint("TOP", 0, -18)
-        title:SetText("Touch of the Grave debug lines. The text is selected: press Ctrl+C.")
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.title:SetPoint("TOP", 0, -18)
         local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
         close:SetPoint("TOPRIGHT", -6, -6)
         local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-        scroll:SetPoint("TOPLEFT", 22, -44)
-        scroll:SetPoint("BOTTOMRIGHT", -44, 22)
+        f.scroll = scroll
         local box = CreateFrame("EditBox", nil, scroll)
         box:SetMultiLine(true)
         box:SetAutoFocus(false)
@@ -609,14 +669,150 @@ local function ShowCopyFrame()
         box:SetScript("OnEscapePressed", function() f:Hide() end)
         scroll:SetScrollChild(box)
         f.box = box
+        -- The parts for the problem report: the steps, the link, and two buttons.
+        f.steps = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.steps:SetPoint("TOPLEFT", 24, -42)
+        f.steps:SetPoint("RIGHT", -24, 0)
+        f.steps:SetJustifyH("LEFT")
+        f.link = CreateFrame("EditBox", nil, f)
+        f.link:SetAutoFocus(false)
+        f.link:SetFontObject(ChatFontNormal)
+        f.link:SetPoint("TOPLEFT", 24, -92)
+        f.link:SetPoint("RIGHT", -24, 0)
+        f.link:SetHeight(18)
+        f.link:SetScript("OnEscapePressed", function() f:Hide() end)
+        f.link:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+        -- The link must stay as it is, also if the player types in the box.
+        f.link:SetScript("OnTextChanged", function(self, byUser)
+            if byUser and f.linkText then
+                self:SetText(f.linkText)
+                self:HighlightText()
+            end
+        end)
+        local function CopyButton(label, x, target)
+            local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+            b:SetSize(150, 22)
+            b:SetPoint("BOTTOM", x, 18)
+            b:SetText(label)
+            b:SetScript("OnClick", function() Select(target) end)
+            return b
+        end
+        f.selectLink = CopyButton("Select the link", 0, f.link)
         tinsert(UISpecialFrames, "TouchOfTheGraveCopyFrame")
         copyFrame = f
     end
+    local f = copyFrame
+    local report = link ~= nil
+    f.title:SetText(title)
+    f.linkText = link
+    f.link:SetText(link or "")
+    f.steps:SetText(steps or "")
+    for _, part in ipairs({ f.steps, f.link, f.selectLink }) do
+        part:SetShown(report)
+    end
+    f.scroll:ClearAllPoints()
+    f.scroll:SetPoint("TOPLEFT", 22, report and -118 or -44)
+    f.scroll:SetPoint("BOTTOMRIGHT", -44, report and 48 or 22)
+    f.box:SetText(text)
+    f:Show()
+    Select(report and f.link or f.box)
+end
+
+local function ShowDebugLines()
     local lines = db.debugLog
-    copyFrame.box:SetText(#lines > 0 and table.concat(lines, "\n") or "No debug lines yet. Type /totg debug, then fight.")
-    copyFrame:Show()
-    copyFrame.box:SetFocus()
-    copyFrame.box:HighlightText()
+    ShowCopyFrame("Touch of the Grave debug lines. The text is selected: press Ctrl+C.",
+        #lines > 0 and table.concat(lines, "\n") or "No debug lines yet. Type /totg debug, then fight.")
+end
+
+-- ---------------------------------------------------------------------------
+-- The problem report: numbers and fixed words only. No character name, no
+-- realm, and no text from the chat or from other players.
+-- ---------------------------------------------------------------------------
+
+-- A short word from the client, with only letters and digits.
+local function Word(value)
+    value = Plain(value)
+    if type(value) ~= "string" and type(value) ~= "number" then
+        return "?"
+    end
+    local word = tostring(value):gsub("[^%w%.%-]", ""):sub(1, 20)
+    return word ~= "" and word or "?"
+end
+
+local function BuildReport()
+    local c = db.counts
+    local lines = {}
+    local function Add(fmt, ...)
+        lines[#lines + 1] = format(fmt, ...)
+    end
+    local getMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    local okV, version = pcall(getMeta, ADDON, "Version")
+    local okB, game, build, _, toc = pcall(GetBuildInfo)
+    local _, classFile = UnitClass("player")
+    Add("Touch of the Grave Timer report")
+    Add("addon %s | game %s build %s interface %s | locale %s", okV and Word(version) or "?",
+        okB and Word(game) or "?", okB and Word(build) or "?", okB and Word(toc) or "?", Word(GetLocale and GetLocale()))
+    Add("class %s | level %s | cooldown setting %s | debug %s", Word(classFile), Word(UnitLevel("player")),
+        Word(db.icd), Word(tostring(db.debug)))
+    Add("events %d | hidden %d | hits on target %d | Shadow hits %d | heals on you %d", c.events or 0, c.hidden or 0,
+        c.targetHits or 0, c.shadowHits or 0, c.heals or 0)
+    Add("pairs %d | procs %d | ignored inside cooldown %d | paused %d | out of combat %d", c.pairs or 0, c.procs or 0,
+        c.ignored or 0, c.paused or 0, c.outOfCombat or 0)
+    local schools = {}
+    for school, n in pairs(c.schools) do
+        schools[#schools + 1] = Word(school) .. "=" .. Word(n)
+    end
+    table.sort(schools)
+    Add("hit schools: %s", #schools > 0 and table.concat(schools, " ") or "none")
+    local log = db.log
+    Add("procs in the log: %d. Last gaps and hit-to-heal times:", #log)
+    for i = math.max(1, #log - 4), #log do
+        local e = log[i]
+        Add("  gap %s pair %s", Word(e.gap or "-"), Word(e.pair or "-"))
+    end
+    local recent = db.recent
+    Add("last events (time, unit, action, school; school 32 is Shadow):")
+    for i = math.max(1, #recent - REPORT_EVENTS + 1), #recent do
+        Add("  %s", tostring(recent[i]):gsub("[^%w%. ]", ""):sub(1, 40))
+    end
+    if #recent == 0 then
+        Add("  none. Fight a monster until the racial procs, then open the report again.")
+    end
+    return table.concat(lines, "\n"):sub(1, MAX_REPORT)
+end
+
+-- The probable cause, from the counters. The player sees it in the window,
+-- and the form gets it as the description.
+local function Cause()
+    local c = db.counts
+    local hiddenSchool = c.schools.hidden or 0
+    if (c.procs or 0) > 0 then
+        return format("The addon found %d procs. If the timer is wrong, the cooldown setting can be wrong.", c.procs)
+    elseif (c.events or 0) == 0 then
+        return "The addon saw no combat event. Fight a monster, then open the report again."
+    elseif (c.shadowHits or 0) == 0 and ((c.hidden or 0) > 0 or hiddenSchool > 0) then
+        return "The game hides the combat data here, so the addon cannot see a proc."
+    elseif (c.shadowHits or 0) == 0 then
+        return "The addon saw no Shadow damage on your target. Each proc must be on your target."
+    elseif (c.heals or 0) == 0 then
+        return "The addon saw Shadow hits, but no heal on you. It needs the heal to know a proc."
+    elseif (c.pairs or 0) == 0 then
+        return "The addon saw Shadow hits and heals, but not at the same time."
+    end
+    return "The addon ignored each match. Detection was paused, or the match came inside the cooldown."
+end
+
+-- Makes text safe for a link: letters, digits, and four signs stay.
+local function UrlEncode(text)
+    return (text:gsub("[^%w%-%._~]", function(ch) return format("%%%02X", ch:byte()) end))
+end
+
+function ShowReport()
+    local report, cause = BuildReport(), Cause()
+    local link = REPORT_URL .. "&title=" .. UrlEncode("Problem report")
+        .. "&what=" .. UrlEncode("Self-check of the addon: " .. cause) .. "&report=" .. UrlEncode(report)
+    ShowCopyFrame("Touch of the Grave problem report", report, link,
+        cause .. "\n\nTo send the report: copy the link (Ctrl+C), open it in a browser, and click the green button.\nThe link has the text below in it. It has no character name.")
 end
 
 -- ---------------------------------------------------------------------------
@@ -679,15 +875,20 @@ local function Command(input)
         db.debug = not db.debug
         Print(db.debug and "debug on. Shadow hits, heals and procs show in chat and go to the saved debug log." or "debug off.")
     elseif cmd == "copy" then
-        ShowCopyFrame()
+        ShowDebugLines()
+    elseif cmd == "report" then
+        ShowReport()
     elseif cmd == "stats" then
         Stats()
     elseif cmd == "clearlog" then
         wipe(db.log)
         wipe(db.debugLog)
-        Print("proc log and debug log cleared.")
+        wipe(db.recent)
+        db.counts = { schools = {} }
+        db.offered = nil
+        Print("proc log, debug log, and report counters cleared.")
     else
-        Print("commands: options, lock, unlock, reset, test, icd <seconds>, size <pixels>, sound, debug, debug all, copy, stats, clearlog")
+        Print("commands: options, lock, unlock, reset, test, icd <seconds>, size <pixels>, sound, report, debug, debug all, copy, stats, clearlog")
     end
 end
 
@@ -711,6 +912,9 @@ loader:SetScript("OnEvent", function(self, event, ...)
         end
         db.log = db.log or {}
         db.debugLog = db.debugLog or {}
+        db.recent = type(db.recent) == "table" and db.recent or {}
+        db.counts = type(db.counts) == "table" and db.counts or {}
+        db.counts.schools = type(db.counts.schools) == "table" and db.counts.schools or {}
 
         SLASH_TOUCHOFTHEGRAVE1 = "/totg"
         local _, raceFile = UnitRace("player")
@@ -758,8 +962,18 @@ loader:SetScript("OnEvent", function(self, event, ...)
         OnUnitCombat(...)
     elseif event == "PLAYER_REGEN_DISABLED" then
         inCombat = true
+        hitsAtFightStart = db.counts.targetHits or 0
     elseif event == "PLAYER_REGEN_ENABLED" then
         inCombat, leftCombatAt = false, GetTime()
+        -- One time: offer the report after many fights with no proc.
+        local c = db.counts
+        if (c.targetHits or 0) > hitsAtFightStart then
+            c.fights = (c.fights or 0) + 1
+            if c.fights >= OFFER_FIGHTS and (c.procs or 0) == 0 and not db.offered then
+                db.offered = true
+                Print("no proc found in %d fights. Type /totg report to see the cause and to send a report.", c.fights)
+            end
+        end
         if openAfterCombat then
             openAfterCombat = false
             OpenOptions()

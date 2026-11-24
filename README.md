@@ -110,6 +110,7 @@ the options open when combat ends.
 - `/totg sound`: set the sound alert on or off (the same as a left-click on the icon).
 - `/totg debug`: show each Shadow hit on your target, each heal on you, and each proc in chat. The lines also go to a saved debug log (the last 300).
 - `/totg debug all`: the same, plus every hit that the addon drops, with its school. This is noisy.
+- `/totg report`: open a window with the probable cause of a problem and one link. The link has a short report in it. Copy the link, open it in a browser, and send the form. The report has no character name and no realm.
 - `/totg copy`: open a window with the saved debug lines, selected. Press Ctrl+C, then paste them where you want.
 - `/totg stats`: show the procs in the log, the shortest gap between two procs, and the longest time from the hit to the heal.
 - `/totg clearlog`: clear the proc log and the debug log.

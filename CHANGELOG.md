@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8 (2026-11-24)
+
+- New: a problem report. Type `/totg report`, or use the button "Open the report" on the options page. A window tells you the probable cause and shows one link. The link has the report in it: copy it, open it in a browser, and send the form.
+- After 15 fights with no proc, the chat offers the report one time.
+- The report has numbers and fixed words only: the versions, your class and level, the counters of the combat events, and the last events. It has no character name and no realm.
+- The counters always run. You do not start the debug mode before a report.
+- `/totg clearlog` also clears the counters.
+
 ## 0.1.7 (2026-11-09)
 
 - A match that comes inside the internal cooldown no longer restarts the timer. A real proc cannot come that soon, so the hit and the heal came from two sources, for example a Shadow spell of another player on your target and a heal on you. The chat says that the match was ignored, with the time since the last proc, so a wrong cooldown value still shows.

@@ -1,0 +1,26 @@
+name: Problem report
+description: Tell us that the addon does not work as it should.
+title: "Problem: "
+labels: ["problem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. In the game, type `/totg report` and copy the report from the window.
+        The report has no character name and no realm.
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong?
+      description: One or two sentences are sufficient.
+      placeholder: "Example: the icon never starts a countdown."
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: The report from /totg report
+      description: Paste the text here (Ctrl+V).
+      render: text
+    validations:
+      required: true
