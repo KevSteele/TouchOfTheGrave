@@ -14,6 +14,10 @@ next hit can proc again.
 - Undead characters only. On other races the addon stays off and tells you so one time.
 - No libraries.
 
+## A problem?
+
+Type `/totg report` in the game. A window tells you the probable cause and gives you one link. Copy the link and open it in a browser to send a short report. The report has no character name and no realm.
+
 ## How it finds a proc
 
 Forever does not let addons read the combat log. Thus the addon uses the
